@@ -29,7 +29,14 @@ public sealed class FoundryClientProvider
         string? clientSecret)
     {
         var credential = CreateCredential(tenantId, clientId, clientSecret);
+        Console.WriteLine("[DEBUG] Foundry connection string RAW: " + connectionString);
 
+        var parts = connectionString.Split(';');
+        Console.WriteLine("[DEBUG] ConnStr parts count: " + parts.Length);
+        for (int i = 0; i < parts.Length; i++)
+        {
+            Console.WriteLine($"[DEBUG] Part[{i}] = '{parts[i]}'");
+        }
         // ✅ IMPORTANT: this ctor expects "<endpoint>;<sub>;<rg>;<project>"
         var client = new AIProjectClient(connectionString, credential);
 
