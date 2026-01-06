@@ -48,12 +48,11 @@ namespace HybridMAS
 
                 // Try endpoint-based initialization
                 var foundryProvider = FoundryClientProvider.Create(
-    projectEndpoint: configuration["AzureFoundry:ProjectEndpoint"]!,
     connectionString: configuration["AzureFoundry:ConnectionString"]!,
     researchAgentId: configuration["AzureFoundry:ResearchAgentId"]!,
-    tenantId: configuration["AzureFoundry:TenantId"],      // optional
-    clientId: configuration["AzureFoundry:ClientId"],      // optional
-    clientSecret: configuration["AzureFoundry:ClientSecret"] // optional
+    tenantId: configuration["AzureFoundry:TenantId"],
+    clientId: configuration["AzureFoundry:ClientId"],
+    clientSecret: configuration["AzureFoundry:ClientSecret"]
 );
                 Console.WriteLine("✓ Foundry provider created with Service Principal auth (endpoint-based)");
 

@@ -7,10 +7,6 @@ using Microsoft.SemanticKernel.Agents.AzureAI;
 
 namespace sk_azure_agent_demo.foundry;
 
-/// <summary>
-/// Provides Azure AI Foundry client instances with configuration.
-/// Isolates Foundry-specific integration from orchestration logic.
-/// </summary>
 public sealed class FoundryClientProvider
 {
     public AIProjectClient Client { get; }
@@ -26,21 +22,18 @@ public sealed class FoundryClientProvider
     }
 
     public static FoundryClientProvider Create(
-    string projectEndpoint,
-    string connectionString,
-    string researchAgentId,
-    string? tenantId,
-    string? clientId,
-    string? clientSecret)
+        string connectionString,      // ✅ required
+        string researchAgentId,
+        string? tenantId,
+        string? clientId,
+        string? clientSecret)
     {
         var credential = CreateCredential(tenantId, clientId, clientSecret);
 
-        // IMPORTANT: pass endpoint as string
-        var client = new AIProjectClient(projectEndpoint, credential);
+        // ✅ IMPORTANT: this ctor expects "<endpoint>;<sub>;<rg>;<project>"
+        var client = new AIProjectClient(connectionString, credential);
 
-        var clientProvider = AzureAIClientProvider.FromConnectionString(
-            connectionString,
-            credential);
+        var clientProvider = AzureAIClientProvider.FromConnectionString(connectionString, credential);
 
         return new FoundryClientProvider(client, clientProvider, researchAgentId);
     }
@@ -55,10 +48,7 @@ public sealed class FoundryClientProvider
         {
             return new ClientSecretCredential(
                 tenantId, clientId, clientSecret,
-                new ClientSecretCredentialOptions
-                {
-                    AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
-                });
+                new ClientSecretCredentialOptions { AuthorityHost = AzureAuthorityHosts.AzurePublicCloud });
         }
 
         return new DefaultAzureCredential(new DefaultAzureCredentialOptions
