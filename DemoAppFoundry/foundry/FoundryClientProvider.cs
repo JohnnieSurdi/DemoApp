@@ -31,14 +31,29 @@ public sealed class FoundryClientProvider
         var credential = CreateCredential(tenantId, clientId, clientSecret);
         Console.WriteLine("[DEBUG] Foundry connection string RAW: " + connectionString);
 
-        var parts = connectionString.Split(';');
-        Console.WriteLine("[DEBUG] ConnStr parts count: " + parts.Length);
-        for (int i = 0; i < parts.Length; i++)
-        {
-            Console.WriteLine($"[DEBUG] Part[{i}] = '{parts[i]}'");
-        }
+        var parts = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 4)
+            throw new ArgumentException(
+                "Invalid connection string format. Expected: <endpoint>;<subscription_id>;<resource_group>;<project_name>",
+                nameof(connectionString));
+
+        var endpoint = parts[0].Trim();          // https://...services.ai.azure.com
+        var subscriptionId = parts[1].Trim();
+        var resourceGroup = parts[2].Trim();
+        var projectName = parts[3].Trim();
+
+        Console.WriteLine($"[DEBUG] Using structured AIProjectClient ctor:");
+        Console.WriteLine($"[DEBUG] endpoint={endpoint}");
+        Console.WriteLine($"[DEBUG] sub={subscriptionId}");
+        Console.WriteLine($"[DEBUG] rg={resourceGroup}");
+        Console.WriteLine($"[DEBUG] project={projectName}");
         // ✅ IMPORTANT: this ctor expects "<endpoint>;<sub>;<rg>;<project>"
-        var client = new AIProjectClient(connectionString, credential);
+        var client = new AIProjectClient(
+            new Uri(endpoint),
+            subscriptionId,
+            resourceGroup,
+            projectName,
+            credential);
 
         var clientProvider = AzureAIClientProvider.FromConnectionString(connectionString, credential);
 
