@@ -25,8 +25,9 @@ namespace HybridMAS
             {
                 // Load configuration
                 var configuration = new ConfigurationBuilder()
-                    .AddJsonFile("appsettings.json", optional: false)
-                    .Build();
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .Build();
 
                 Console.WriteLine("✓ Configuration loaded");
 
