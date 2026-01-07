@@ -1,26 +1,17 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-using Azure.AI.Projects;
-using DotNetEnv;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents.AzureAI;
+using Azure.AI.Agents.Persistent;
 
 namespace Steps;
 
-
-public sealed class ResearchAgent(AzureAIClientProvider clientProvider) : KernelProcessStep
+public sealed class ResearchAgent(FoundryClientProvider foundryProvider) : KernelProcessStep
 {
-    readonly AzureAIClientProvider clientProvider = clientProvider;
-    readonly AgentsClient agentsClient = clientProvider.Client.GetAgentsClient();
+    private readonly FoundryClientProvider _foundryProvider = foundryProvider;
 
     [KernelFunction]
     public async ValueTask<string> ExecuteAsync(KernelProcessStepContext context, string threadId)
     {
-        Env.Load();
-
-        Agent definition = await agentsClient.GetAgentAsync(Environment.GetEnvironmentVariable("RESEARCH_AGENT_ID"));
-        AzureAIAgent agent = new(definition, clientProvider){Kernel = new Kernel()};
-
         // Print agent details to the screen
         Console.WriteLine();
         Console.BackgroundColor = ConsoleColor.White;
@@ -29,28 +20,49 @@ public sealed class ResearchAgent(AzureAIClientProvider clientProvider) : Kernel
         Console.ResetColor();
         Console.WriteLine();
 
-        // Run agent to perform research
-        try 
+        try
         {
-            await foreach (StreamingChatMessageContent response in agent.InvokeStreamingAsync(threadId))
+            var agentsClient = _foundryProvider.PersistentAgents;
+
+            // Fetch persistent agent
+            PersistentAgent agent = agentsClient.Administration.GetAgent(_foundryProvider.ResearchAgentId);
+
+            // Run the agent on the existing threadId
+            ThreadRun run = agentsClient.Runs.CreateRun(threadId, agent.Id);
+
+            while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
             {
-                foreach(var item in response.Items)
+                await Task.Delay(500);
+                run = agentsClient.Runs.GetRun(threadId, run.Id);
+            }
+
+            if (run.Status != RunStatus.Completed)
+            {
+                throw new InvalidOperationException($"Run failed or was canceled: {run.LastError?.Message}");
+            }
+
+            // Print assistant messages
+            var messages = agentsClient.Messages.GetMessages(threadId, order: ListSortOrder.Ascending);
+
+            foreach (var msg in messages)
+            {
+                if (msg.Role != MessageRole.Agent) continue;
+
+                foreach (var item in msg.ContentItems)
                 {
-                    switch(item)
+                    if (item is MessageTextContent text && !string.IsNullOrWhiteSpace(text.Text))
                     {
-                        case StreamingTextContent textContent:
-                            Console.Write(textContent);
-                            break;
+                        Console.WriteLine(text.Text);
                     }
                 }
             }
+
             Console.WriteLine();
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
         }
-        
 
         return threadId;
     }

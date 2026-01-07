@@ -5,8 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Events;
 using Steps;
-using sk_azure_agent_demo.foundry;
 using System.Diagnostics;
+using Azure.Core;
+using Azure.Identity;
 
 namespace HybridMAS
 {
@@ -39,22 +40,34 @@ namespace HybridMAS
                 Console.WriteLine($"✓ Foundry Connection String: {foundryConnectionString.Substring(0, 50)}...");
                 Console.WriteLine($"✓ Research Agent ID: {researchAgentId}");
 
-                // Setup Foundry provider with service principal authentication
-                var foundryTenantId = configuration["AzureFoundry:TenantId"]!;
-                var foundryClientId = configuration["AzureFoundry:ClientId"]!;
-                var foundryClientSecret = configuration["AzureFoundry:ClientSecret"]!;
+                var projectEndpoint = configuration["AzureFoundry:ProjectEndpoint"]!;
 
-                // Around line 40-52 in Program.cs, replace the Foundry provider creation with:
+                TokenCredential credential;
 
-                // Try endpoint-based initialization
+                // If you provided Service Principal secrets in appsettings (optional):
+                var tenantId = configuration["AzureFoundry:TenantId"];
+                var clientId = configuration["AzureFoundry:ClientId"];
+                var clientSecret = configuration["AzureFoundry:ClientSecret"];
+
+                if (!string.IsNullOrWhiteSpace(tenantId) &&
+                    !string.IsNullOrWhiteSpace(clientId) &&
+                    !string.IsNullOrWhiteSpace(clientSecret))
+                {
+                    credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+                }
+                else
+                {
+                    // Local dev / Cloud Shell: uses `az login` identity
+                    credential = new DefaultAzureCredential();
+                }
+
                 var foundryProvider = FoundryClientProvider.Create(
-    connectionString: configuration["AzureFoundry:ConnectionString"]!,
-    researchAgentId: configuration["AzureFoundry:ResearchAgentId"]!,
-    tenantId: configuration["AzureFoundry:TenantId"],
-    clientId: configuration["AzureFoundry:ClientId"],
-    clientSecret: configuration["AzureFoundry:ClientSecret"]
-);
-                Console.WriteLine("✓ Foundry provider created with Service Principal auth (endpoint-based)");
+                    projectEndpoint,
+                    researchAgentId,
+                    credential
+                );
+
+                Console.WriteLine("✓ Foundry provider created");
 
                 // Setup Semantic Kernel with Azure OpenAI and register dependencies
                 var kernelBuilder = Kernel.CreateBuilder();

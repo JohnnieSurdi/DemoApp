@@ -1,17 +1,12 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-
-using Azure.AI.Projects;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents.AzureAI;
+﻿using Microsoft.SemanticKernel;
 using Events;
 using Models;
-using sk_azure_agent_demo.foundry;
+
+using PA = Azure.AI.Agents.Persistent; // alias
+using Projects = Azure.AI.Projects;     // alias
 
 namespace Steps;
 
-/// <summary>
-/// Calls Azure AI Foundry Agent with file search for document-based questions.
-/// </summary>
 public sealed class FoundryLocalSearchStep(FoundryClientProvider foundryProvider) : KernelProcessStep
 {
     private readonly FoundryClientProvider _foundryProvider = foundryProvider;
@@ -23,83 +18,60 @@ public sealed class FoundryLocalSearchStep(FoundryClientProvider foundryProvider
 
         try
         {
-            Console.WriteLine($"[DEBUG] Getting agents client...");
-            var agentsClient = _foundryProvider.Client.GetAgentsClient();
+            var agents = _foundryProvider.PersistentAgents;
 
-            Console.WriteLine($"[DEBUG] Fetching agent definition: {_foundryProvider.ResearchAgentId}");
-            // Get your existing Research Agent from Foundry
-            Agent definition = await agentsClient.GetAgentAsync(_foundryProvider.ResearchAgentId);
-            Console.WriteLine($"[DEBUG] Agent found: {definition.Name}");
+            // Get the persistent agent
+            PA.PersistentAgent agent = agents.Administration.GetAgent(_foundryProvider.ResearchAgentId);
 
-            Console.WriteLine($"[DEBUG] Creating AzureAIAgent...");
-            AzureAIAgent agent = new(definition, _foundryProvider.GetClientProvider());
+            // Thread
+            PA.PersistentAgentThread thread = agents.Threads.CreateThread();
 
-            Console.WriteLine($"[DEBUG] Creating thread...");
-            // Create thread and send message
-            AgentThread thread = await agentsClient.CreateThreadAsync();
-            Console.WriteLine($"[DEBUG] Thread created: {thread.Id}");
+            // Message
+            agents.Messages.CreateMessage(thread.Id, PA.MessageRole.User, userQuestion);
 
-            Console.WriteLine($"[DEBUG] Sending message to thread...");
-            await agentsClient.CreateMessageAsync(thread.Id, MessageRole.User, userQuestion);
+            // Run
+            PA.ThreadRun run = agents.Runs.CreateRun(thread.Id, agent.Id);
 
-            Console.WriteLine($"[DEBUG] Invoking agent stream...");
-            // Collect streaming response
-            var answer = string.Empty;
-            await foreach (StreamingChatMessageContent response in agent.InvokeStreamingAsync(thread.Id))
+            // Poll
+            do
             {
-                foreach (var item in response.Items)
+                await Task.Delay(500);
+                run = agents.Runs.GetRun(thread.Id, run.Id);
+            }
+            while (run.Status == PA.RunStatus.Queued || run.Status == PA.RunStatus.InProgress);
+
+            if (run.Status != PA.RunStatus.Completed)
+                throw new InvalidOperationException($"Run failed: {run.LastError?.Message}");
+
+            // Read messages
+            var sb = new System.Text.StringBuilder();
+            var messages = agents.Messages.GetMessages(thread.Id, order: PA.ListSortOrder.Ascending);
+
+            foreach (var m in messages)
+            {
+                foreach (var item in m.ContentItems)
                 {
-                    if (item is StreamingTextContent textContent)
-                    {
-                        Console.Write(textContent);
-                        answer += textContent.Text;
-                    }
+                    if (item is PA.MessageTextContent text)
+                        sb.AppendLine(text.Text);
                 }
             }
-            Console.WriteLine();
-            Console.WriteLine($"[DEBUG] Stream completed. Answer length: {answer.Length}");
-            Console.WriteLine();
 
-            var agentResponse = new AgentResponse(
-                userQuestion,
-                answer,
-                "FoundryLocalSearch (Azure AI Foundry)"
-            );
+            var answer = sb.ToString().Trim();
+            if (string.IsNullOrWhiteSpace(answer))
+                answer = "(No text output returned)";
 
-            Console.WriteLine($"[DEBUG] Emitting DraftReady event...");
+            var agentResponse = new AgentResponse(userQuestion, answer, "Foundry Persistent Agent");
+
             await context.EmitEventAsync(new KernelProcessEvent
             {
                 Id = ProcessEvents.DraftReady,
                 Data = agentResponse
             });
-            Console.WriteLine($"[DEBUG] Event emitted successfully");
         }
         catch (Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"\n❌ Error in FoundryLocalSearchStep:");
-            Console.WriteLine($"   Type: {ex.GetType().Name}");
-            Console.WriteLine($"   Message: {ex.Message}");
-            if (ex.InnerException != null)
-            {
-                Console.WriteLine($"   Inner: {ex.InnerException.GetType().Name}");
-                Console.WriteLine($"   Inner Message: {ex.InnerException.Message}");
-            }
-            Console.WriteLine($"   Stack: {ex.StackTrace}");
-            Console.ResetColor();
-
-            // Still emit an event so the process can continue
-            var errorResponse = new AgentResponse(
-                userQuestion,
-                $"Error: {ex.Message}",
-                "FoundryLocalSearch (Error)"
-            );
-
-            await context.EmitEventAsync(new KernelProcessEvent
-            {
-                Id = ProcessEvents.DraftReady,
-                Data = errorResponse
-            });
+            var errorResponse = new AgentResponse(userQuestion, $"Error: {ex.Message}", "FoundryLocalSearch (Error)");
+            await context.EmitEventAsync(new KernelProcessEvent { Id = ProcessEvents.DraftReady, Data = errorResponse });
         }
     }
 
