@@ -19,32 +19,33 @@ public sealed class FoundryLocalSearchStep(FoundryClientProvider foundryProvider
         {
             var agents = _foundryProvider.PersistentAgents;
 
-            PA.PersistentAgent agent = agents.Administration.GetAgent(_foundryProvider.ResearchAgentId);
+            PA.PersistentAgent agent =
+                await agents.Administration.GetAgentAsync(_foundryProvider.ResearchAgentId);
 
-            PA.PersistentAgentThread thread = agents.Threads.CreateThread();
+            PA.PersistentAgentThread thread =
+                await agents.Threads.CreateThreadAsync();
 
-            agents.Messages.CreateMessage(thread.Id, PA.MessageRole.User, userQuestion);
+            await agents.Messages.CreateMessageAsync(thread.Id, PA.MessageRole.User, userQuestion);
 
-            PA.ThreadRun run = agents.Runs.CreateRun(thread.Id, agent.Id);
+            PA.ThreadRun run =
+                await agents.Runs.CreateRunAsync(thread.Id, agent.Id);
 
-            do
+            while (run.Status == PA.RunStatus.Queued || run.Status == PA.RunStatus.InProgress)
             {
                 await Task.Delay(500);
-                run = agents.Runs.GetRun(thread.Id, run.Id);
+                run = await agents.Runs.GetRunAsync(thread.Id, run.Id);
             }
-            while (run.Status == PA.RunStatus.Queued || run.Status == PA.RunStatus.InProgress);
 
             if (run.Status != PA.RunStatus.Completed)
                 throw new InvalidOperationException($"Run failed: {run.LastError?.Message}");
 
             var sb = new System.Text.StringBuilder();
-            var messages = agents.Messages.GetMessages(thread.Id, order: PA.ListSortOrder.Ascending);
 
-            foreach (var m in messages)
+            await foreach (var m in agents.Messages.GetMessagesAsync(thread.Id, order: PA.ListSortOrder.Ascending))
             {
                 foreach (var item in m.ContentItems)
                 {
-                    if (item is PA.MessageTextContent text)
+                    if (item is PA.MessageTextContent text && !string.IsNullOrWhiteSpace(text.Text))
                         sb.AppendLine(text.Text);
                 }
             }

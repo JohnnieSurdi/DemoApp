@@ -22,33 +22,29 @@ public sealed class ResearchAgent(FoundryClientProvider foundryProvider) : Kerne
         {
             var agentsClient = _foundryProvider.PersistentAgents;
 
-            PersistentAgent agent = agentsClient.Administration.GetAgent(_foundryProvider.ResearchAgentId);
+            PersistentAgent agent =
+                await agentsClient.Administration.GetAgentAsync(_foundryProvider.ResearchAgentId);
 
-            ThreadRun run = agentsClient.Runs.CreateRun(threadId, agent.Id);
+            ThreadRun run =
+                await agentsClient.Runs.CreateRunAsync(threadId, agent.Id);
 
             while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
             {
                 await Task.Delay(500);
-                run = agentsClient.Runs.GetRun(threadId, run.Id);
+                run = await agentsClient.Runs.GetRunAsync(threadId, run.Id);
             }
 
             if (run.Status != RunStatus.Completed)
-            {
                 throw new InvalidOperationException($"Run failed or was canceled: {run.LastError?.Message}");
-            }
 
-            var messages = agentsClient.Messages.GetMessages(threadId, order: ListSortOrder.Ascending);
-
-            foreach (var msg in messages)
+            await foreach (var msg in agentsClient.Messages.GetMessagesAsync(threadId, order: ListSortOrder.Ascending))
             {
                 if (msg.Role != MessageRole.Agent) continue;
 
                 foreach (var item in msg.ContentItems)
                 {
                     if (item is MessageTextContent text && !string.IsNullOrWhiteSpace(text.Text))
-                    {
                         Console.WriteLine(text.Text);
-                    }
                 }
             }
 
