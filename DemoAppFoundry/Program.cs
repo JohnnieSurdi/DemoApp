@@ -27,13 +27,13 @@ namespace DemoAppFoundry
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
     .Build();
 
-                Console.WriteLine("✓ Configuration loaded");
+                Console.WriteLine(" Configuration loaded");
                 var foundryConnectionString = configuration["AzureFoundry:ConnectionString"]!;
                 var researchAgentId = configuration["AzureFoundry:ResearchAgentId"]!;
                 var foundryApiKey = configuration["AzureFoundry:ApiKey"]!;
 
-                Console.WriteLine($"✓ Foundry Connection String: {foundryConnectionString.Substring(0, 50)}...");
-                Console.WriteLine($"✓ Research Agent ID: {researchAgentId}");
+                //Console.WriteLine($"✓ Foundry Connection String: {foundryConnectionString.Substring(0, 50)}...");
+                Console.WriteLine($" Research Agent ID: {researchAgentId}");
 
                 var projectEndpoint = configuration["AzureFoundry:ProjectEndpoint"]!;
 
@@ -60,7 +60,7 @@ namespace DemoAppFoundry
                     credential
                 );
 
-                Console.WriteLine("✓ Foundry provider created");
+                Console.WriteLine(" Foundry provider created");
 
                 var kernelBuilder = Kernel.CreateBuilder();
 
@@ -73,7 +73,7 @@ namespace DemoAppFoundry
                 );
 
                 Kernel kernel = kernelBuilder.Build();
-                Console.WriteLine("✓ Kernel built");
+                Console.WriteLine(" Kernel built");
 
                 ProcessBuilder process = new("DemoAppFoundry");
                 var init = process.AddStepFromType<Init>();
@@ -127,7 +127,7 @@ namespace DemoAppFoundry
                         break;
                     }
 
-                    Console.WriteLine($"\n[DEBUG] Starting process for: {input}");
+                    Console.WriteLine($"\n Starting process for: {input}");
 
                     try
                     {
@@ -139,16 +139,16 @@ namespace DemoAppFoundry
                                 Data = input
                             });
 
-                        Console.WriteLine("[DEBUG] Process started, waiting for completion...");
+                        Console.WriteLine("Process started, waiting for completion...");
 
-                        await Task.Delay(30000);
+                        await Task.Delay(8000);
 
-                        Console.WriteLine("[DEBUG] Process completed or timed out");
+                        Console.WriteLine("Process completed");
                     }
                     catch (Exception ex)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"\n❌ Error processing question: {ex.GetType().Name}");
+                        Console.WriteLine($"\n Error processing question: {ex.GetType().Name}");
                         Console.WriteLine($"   Message: {ex.Message}");
                         if (ex.InnerException != null)
                         {
@@ -164,7 +164,7 @@ namespace DemoAppFoundry
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\n❌ Fatal Error: {ex.GetType().Name}");
+                Console.WriteLine($"\n Fatal Error: {ex.GetType().Name}");
                 Console.WriteLine($"   Message: {ex.Message}");
                 Console.WriteLine($"\nStack Trace:\n{ex.StackTrace}");
                 if (ex.InnerException != null)
