@@ -3,6 +3,7 @@ using Azure.AI.Agents.Persistent;
 using Azure.Core;
 using Azure.Identity;
 
+namespace DemoAppFoundry.Foundry;
 public sealed class FoundryClientProvider
 {
     public AIProjectClient ProjectClient { get; }
@@ -20,7 +21,6 @@ public sealed class FoundryClientProvider
     {
         var projectClient = new AIProjectClient(new Uri(projectEndpoint), credential);
 
-        // This exists once you’re on a newer Azure.AI.Projects version:
         var persistent = projectClient.GetPersistentAgentsClient();
 
         return new FoundryClientProvider(projectClient, persistent, researchAgentId);

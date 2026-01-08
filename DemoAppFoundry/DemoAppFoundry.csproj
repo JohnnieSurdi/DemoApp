@@ -17,7 +17,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.37.0" />
-    <PackageReference Include="Microsoft.SemanticKernel.Agents.AzureAI" Version="1.37.0-alpha" />
     <PackageReference Include="Microsoft.SemanticKernel.Core" Version="1.37.0" />
     <PackageReference Include="Microsoft.SemanticKernel.Process.Abstractions" Version="1.37.0-alpha" />
     <PackageReference Include="Microsoft.SemanticKernel.Process.Core" Version="1.37.0-alpha" />

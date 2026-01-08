@@ -1,13 +1,8 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+﻿using Microsoft.SemanticKernel;
+using DemoAppFoundry.Events;
 
-using Microsoft.SemanticKernel;
-using Events;
+namespace DemoAppFoundry.Steps;
 
-namespace Steps;
-
-/// <summary>
-/// Initialization step that receives user input and starts the process.
-/// </summary>
 public sealed class Init : KernelProcessStep
 {
     [KernelFunction]

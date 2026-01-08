@@ -1,15 +1,10 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-
-using Microsoft.SemanticKernel;
+﻿using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Events;
-using Models;
+using DemoAppFoundry.Events;
+using DemoAppFoundry.Models;
 
-namespace Steps;
+namespace DemoAppFoundry.Steps;
 
-/// <summary>
-/// Handles general conversation about Jan Enterprise.
-/// </summary>
 public sealed class GeneralChatStep(IChatCompletionService chatCompletion) : KernelProcessStep
 {
     private readonly IChatCompletionService _chatCompletion = chatCompletion;
@@ -27,7 +22,6 @@ Keep responses concise and friendly.";
         var chatHistory = new ChatHistory(systemPrompt);
         chatHistory.AddUserMessage(userQuestion);
 
-        // In your SK version: don't pass Kernel here
         var response = await _chatCompletion.GetChatMessageContentAsync(chatHistory);
 
         var answer = response.Content ?? "I'm not sure how to answer that.";

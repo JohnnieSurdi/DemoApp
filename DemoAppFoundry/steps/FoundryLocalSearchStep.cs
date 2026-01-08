@@ -1,11 +1,10 @@
 ﻿using Microsoft.SemanticKernel;
-using Events;
-using Models;
+using DemoAppFoundry.Events;
+using DemoAppFoundry.Models;
+using PA = Azure.AI.Agents.Persistent;
+using DemoAppFoundry.Foundry;
 
-using PA = Azure.AI.Agents.Persistent; // alias
-using Projects = Azure.AI.Projects;     // alias
-
-namespace Steps;
+namespace DemoAppFoundry.Steps;
 
 public sealed class FoundryLocalSearchStep(FoundryClientProvider foundryProvider) : KernelProcessStep
 {
@@ -20,19 +19,14 @@ public sealed class FoundryLocalSearchStep(FoundryClientProvider foundryProvider
         {
             var agents = _foundryProvider.PersistentAgents;
 
-            // Get the persistent agent
             PA.PersistentAgent agent = agents.Administration.GetAgent(_foundryProvider.ResearchAgentId);
 
-            // Thread
             PA.PersistentAgentThread thread = agents.Threads.CreateThread();
 
-            // Message
             agents.Messages.CreateMessage(thread.Id, PA.MessageRole.User, userQuestion);
 
-            // Run
             PA.ThreadRun run = agents.Runs.CreateRun(thread.Id, agent.Id);
 
-            // Poll
             do
             {
                 await Task.Delay(500);
@@ -43,7 +37,6 @@ public sealed class FoundryLocalSearchStep(FoundryClientProvider foundryProvider
             if (run.Status != PA.RunStatus.Completed)
                 throw new InvalidOperationException($"Run failed: {run.LastError?.Message}");
 
-            // Read messages
             var sb = new System.Text.StringBuilder();
             var messages = agents.Messages.GetMessages(thread.Id, order: PA.ListSortOrder.Ascending);
 

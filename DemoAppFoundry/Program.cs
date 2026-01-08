@@ -1,21 +1,19 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-
-using Microsoft.SemanticKernel;
+﻿using Microsoft.SemanticKernel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Events;
-using Steps;
+using DemoAppFoundry.Events;
+using DemoAppFoundry.Steps;
+using DemoAppFoundry.Foundry;
 using System.Diagnostics;
 using Azure.Core;
 using Azure.Identity;
 
-namespace HybridMAS
+namespace DemoAppFoundry
 {
     public static class Program
     {
         public static async Task Main(string[] args)
         {
-            // Force console to appear
             Console.WriteLine("=== Application Starting ===");
             Console.WriteLine($"Working Directory: {Environment.CurrentDirectory}");
             Console.WriteLine();
@@ -24,15 +22,12 @@ namespace HybridMAS
 
             try
             {
-                // Load configuration
                 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
     .Build();
 
                 Console.WriteLine("✓ Configuration loaded");
-
-                // Setup Foundry provider with connection string
                 var foundryConnectionString = configuration["AzureFoundry:ConnectionString"]!;
                 var researchAgentId = configuration["AzureFoundry:ResearchAgentId"]!;
                 var foundryApiKey = configuration["AzureFoundry:ApiKey"]!;
@@ -44,7 +39,6 @@ namespace HybridMAS
 
                 TokenCredential credential;
 
-                // If you provided Service Principal secrets in appsettings (optional):
                 var tenantId = configuration["AzureFoundry:TenantId"];
                 var clientId = configuration["AzureFoundry:ClientId"];
                 var clientSecret = configuration["AzureFoundry:ClientSecret"];
@@ -57,7 +51,6 @@ namespace HybridMAS
                 }
                 else
                 {
-                    // Local dev / Cloud Shell: uses `az login` identity
                     credential = new DefaultAzureCredential();
                 }
 
@@ -69,24 +62,9 @@ namespace HybridMAS
 
                 Console.WriteLine("✓ Foundry provider created");
 
-                // Setup Semantic Kernel with Azure OpenAI and register dependencies
                 var kernelBuilder = Kernel.CreateBuilder();
 
-                // Register all dependencies that steps need
                 kernelBuilder.Services.AddSingleton(foundryProvider);
-
-                // Register a factory for Kernel so it can be injected
-                //kernelBuilder.Services.AddSingleton<Kernel>(sp =>
-                //{
-                //    var builder = Kernel.CreateBuilder();
-                //    builder.Services.AddSingleton(foundryProvider);
-                //    builder.AddAzureOpenAIChatCompletion(
-                //        deploymentName: configuration["AzureOpenAI:DeploymentName"]!,
-                //        endpoint: configuration["AzureOpenAI:Endpoint"]!,
-                //        apiKey: configuration["AzureOpenAI:ApiKey"]!
-                //    );
-                //    return builder.Build();
-                //});
 
                 kernelBuilder.AddAzureOpenAIChatCompletion(
                     deploymentName: configuration["AzureOpenAI:DeploymentName"]!,
@@ -97,15 +75,13 @@ namespace HybridMAS
                 Kernel kernel = kernelBuilder.Build();
                 Console.WriteLine("✓ Kernel built");
 
-                // Build the process once
-                ProcessBuilder process = new("HybridMAS");
+                ProcessBuilder process = new("DemoAppFoundry");
                 var init = process.AddStepFromType<Init>();
                 var router = process.AddStepFromType<RouterStep>();
                 var generalChat = process.AddStepFromType<GeneralChatStep>();
                 var foundrySearch = process.AddStepFromType<FoundryLocalSearchStep>();
                 var editor = process.AddStepFromType<EditorStep>();
 
-                // Define event-driven flow
                 process
                     .OnInputEvent(ProcessEvents.StartProcess)
                     .SendEventTo(new ProcessFunctionTargetBuilder(init));
@@ -138,7 +114,6 @@ namespace HybridMAS
                 Console.WriteLine("✓ Process built");
                 Console.WriteLine();
 
-                // Main interaction loop
                 while (true)
                 {
                     Console.ForegroundColor = ConsoleColor.Cyan;
@@ -156,7 +131,6 @@ namespace HybridMAS
 
                     try
                     {
-                        // Start the process for this question
                         using var runningProcess = await kernelProcess.StartAsync(
                             kernel,
                             new KernelProcessEvent()
@@ -167,8 +141,7 @@ namespace HybridMAS
 
                         Console.WriteLine("[DEBUG] Process started, waiting for completion...");
 
-                        // Wait longer for process to complete
-                        await Task.Delay(30000); // 30 seconds
+                        await Task.Delay(30000);
 
                         Console.WriteLine("[DEBUG] Process completed or timed out");
                     }

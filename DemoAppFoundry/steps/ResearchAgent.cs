@@ -1,9 +1,8 @@
-// Copyright (c) Microsoft. All rights reserved.
-
 using Microsoft.SemanticKernel;
 using Azure.AI.Agents.Persistent;
+using DemoAppFoundry.Foundry;
 
-namespace Steps;
+namespace DemoAppFoundry.Steps;
 
 public sealed class ResearchAgent(FoundryClientProvider foundryProvider) : KernelProcessStep
 {
@@ -12,7 +11,6 @@ public sealed class ResearchAgent(FoundryClientProvider foundryProvider) : Kerne
     [KernelFunction]
     public async ValueTask<string> ExecuteAsync(KernelProcessStepContext context, string threadId)
     {
-        // Print agent details to the screen
         Console.WriteLine();
         Console.BackgroundColor = ConsoleColor.White;
         Console.ForegroundColor = ConsoleColor.DarkCyan;
@@ -24,10 +22,8 @@ public sealed class ResearchAgent(FoundryClientProvider foundryProvider) : Kerne
         {
             var agentsClient = _foundryProvider.PersistentAgents;
 
-            // Fetch persistent agent
             PersistentAgent agent = agentsClient.Administration.GetAgent(_foundryProvider.ResearchAgentId);
 
-            // Run the agent on the existing threadId
             ThreadRun run = agentsClient.Runs.CreateRun(threadId, agent.Id);
 
             while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
@@ -41,7 +37,6 @@ public sealed class ResearchAgent(FoundryClientProvider foundryProvider) : Kerne
                 throw new InvalidOperationException($"Run failed or was canceled: {run.LastError?.Message}");
             }
 
-            // Print assistant messages
             var messages = agentsClient.Messages.GetMessages(threadId, order: ListSortOrder.Ascending);
 
             foreach (var msg in messages)

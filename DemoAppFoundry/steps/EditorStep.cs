@@ -1,13 +1,8 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
+﻿using Microsoft.SemanticKernel;
+using DemoAppFoundry.Models;
 
-using Microsoft.SemanticKernel;
-using Models;
+namespace DemoAppFoundry.Steps;
 
-namespace Steps;
-
-/// <summary>
-/// Final step that formats and displays the agent response.
-/// </summary>
 public sealed class EditorStep : KernelProcessStep
 {
     [KernelFunction]

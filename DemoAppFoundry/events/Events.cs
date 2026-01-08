@@ -1,9 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-namespace Events;
 
-/// <summary>
-/// Processes Events emitted by shared steps.<br/>
-/// </summary>
+namespace DemoAppFoundry.Events;
+
 public static class ProcessEvents
 {
     public static readonly string StartProcess = nameof(StartProcess);

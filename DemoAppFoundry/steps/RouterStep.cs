@@ -1,15 +1,10 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-
-using Microsoft.SemanticKernel;
+﻿using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
-using Events;
+using DemoAppFoundry.Events;
 
-namespace Steps;
+namespace DemoAppFoundry.Steps;
 
-/// <summary>
-/// Routes user questions to either general chat or document search based on intent.
-/// </summary>
 public sealed class RouterStep(IChatCompletionService chatCompletion) : KernelProcessStep
 {
     private readonly IChatCompletionService _chatCompletion = chatCompletion;
